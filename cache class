@@ -1,0 +1,103 @@
+#include "cache_class.h"
+
+// Constructor
+Cache::Cache(int num_entries, int assoc) : num_entries(num_entries), assoc(assoc) {
+    // Calculate number of sets
+    num_sets = num_entries / assoc;
+
+    // Initialize cache entries array
+    entries = new Entry*[num_sets];
+    for (int i = 0; i < num_sets; i++) {
+        entries[i] = new Entry[assoc];
+    }
+}
+
+// Destructor
+Cache::~Cache() {
+    // Clean up dynamically allocated memory
+    for (int i = 0; i < num_sets; i++) {
+        delete[] entries[i];
+    }
+    delete[] entries;
+}
+// Using CGT
+
+
+// Display the cache contents
+void display(ofstream& outfile) {
+    // Output the contents of the cache
+    for (int i = 0; i < num_sets; i++) {
+        outfile << "Set " << i << ":\n";
+        for (int j = 0; j < assoc; j++) {
+            outfile << "Way " << j << ": ";
+            entries[i][j].display(outfile);
+        }
+    }
+}
+
+// Calculate the set index from an address
+int Cache::get_index(unsigned long addr) {
+    // Calculate the index based on the number of sets and the address
+    // Assuming that the set index is calculated using a bit mask
+    return (addr >> 2) & (num_sets - 1);
+}
+
+// Calculate the tag from an address
+int Cache::get_tag(unsigned long addr) {
+    // Calculate the tag based on the address
+    // Assuming that the tag is calculated using a shift operation
+    return addr >> (2 + static_cast<int>(log2(num_sets)));
+}
+
+// Retrieve the address of a specific way and set
+unsigned long Cache::retrieve_addr(int way, int index) {
+    // Combine the set index, way, and tag to form the address
+    // This function might not be necessary depending on your use case
+    // Implement it if required
+    return 0;  // Placeholder implementation
+}
+
+// Check if the given memory address results in a cache hit
+bool hit(ofstream& outfile, unsigned long addr) {
+    // Calculate the set index and tag
+    int index = get_index(addr);
+    int tag = get_tag(addr);
+
+    // Iterate through all ways in the set to find a hit
+    for (int i = 0; i < assoc; i++) {
+        if (entries[index][i].get_valid() && entries[index][i].get_tag() == tag) {
+            // It's a hit
+            outfile << addr << " : HIT\n";
+            return true;
+        }
+    }
+
+    // If we reach here, it's a miss
+    outfile << addr << " : MISS\n";
+    return false;
+}
+
+// Update the cache with a new address reference
+void Cache::update(ofstream& outfile, unsigned long addr) {
+    // Calculate the set index and tag
+    int index = get_index(addr);
+    int tag = get_tag(addr);
+
+    // Implement the update policy (e.g., least recently used, least frequently used)
+    // Here, we're implementing a simple LRU replacement policy
+    int lru_index = 0;
+    int lru_count = entries[index][0].get_ref();
+
+    // Find the least recently used way in the set
+    for (int i = 1; i < assoc; i++) {
+        if (entries[index][i].get_ref() < lru_count) {
+            lru_count = entries[index][i].get_ref();
+            lru_index = i;
+        }
+    }
+
+    // Update the cache entry
+    entries[index][lru_index].set_tag(tag);
+    entries[index][lru_index].set_valid(true);
+    entries[index][lru_index].set_ref(entries[index][lru_index].get_ref() + 1);
+}
